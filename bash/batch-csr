@@ -167,7 +167,7 @@ EOF
 fi
 
 cd "$COMMON_NAME"
-openssl req -new -nodes -key "$COMMON_NAME.key" -out "$COMMON_NAME.csr" -config "$COMMON_NAME.cnf" -batch
+openssl req -new -nodes -key "$KEY" -out "$COMMON_NAME.csr" -config "$COMMON_NAME.cnf" -batch
 if [ $? == 0 ]; then
   rm "$COMMON_NAME.cnf"
   info "$COMMON_NAME: Certificate generated successfully."
