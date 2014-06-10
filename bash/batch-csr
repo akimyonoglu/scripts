@@ -1,0 +1,174 @@
+#!/bin/bash
+# ---------------------------------------------------------------------------
+# batch-csr - Use openssl's batch option to generate CSRs,
+#             some config and private key options are hardcoded
+#             for the sake of simplicity.
+
+# Copyright 2014, Armagan Kimyonoglu <akimyonoglu@gmail.com>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License at <http://www.gnu.org/licenses/> for
+# more details.
+
+# Revision history(YYYY-MM-dd):
+# 2014-06-10  Created
+# ---------------------------------------------------------------------------
+
+usage () {
+
+  echo """
+batch-csr - Use openssl's batch option to generate CSRs,
+            some config and private key options are hardcoded
+            for the sake of simplicity.
+
+Usage: $0 some.url.com -t template.cnf
+       $0 --country=\"USA\" \\
+          --state=\"CALIFORNIA\" \\
+          --locality=\"SAN FRANCISCO\" \\
+          --organization=\"GOOGLE INC.\" \\
+          --organization-unit=\"IT\" \\
+          --email-address=\"hostmaster@google.com\")
+
+Options (can be used --option value, --option=value or -o value if applicable):
+  -t FILE, --template FILE     CSR config template
+  -k, --key keyfile            private key to use with certificate
+  -h, --help                   Give this help list
+  # following config parameters are required when (-t|--template FILE) is not used.
+  --country COUNTRY            (ex. USA)
+  --state STATE                (ex. CALIFORNIA)
+  --locality LOCALITY          (ex. San Francisco)
+  --organization ORGANIZATION  (ex. Google Inc.)
+  --organization-unit OU,      (ex. IT)
+  --email-address EMAIL,       (ex. hostmaster@google.com)
+"""
+
+}
+
+while [ "$1" != "" ]; do
+    case $1 in
+        --country) COUNTRY="$2"; shift ;;
+        --country=*) COUNTRY="${1#*=}" ;;
+        --state) STATE="$2"; shift ;;
+        --state=*) STATE="${1#*=}" ;;
+        --locality) LOCALITY="$2"; shift ;;
+        --locality=*) LOCALITY="${1#*=}" ;;
+        --organization) ORGANIZATION="$2"; shift ;;
+        --organization=*) ORGANIZATION="${1#*=}" ;;
+        --organization-unit) OUNIT="$2"; shift ;;
+        --organization-unit=*) OUNIT="${1#*=}" ;;
+        --email-address) EMAIL="$2"; shift ;;
+        --email-address=*) EMAIL="${1#*=}" ;;
+        -k|--key) KEY="$2" shift ;;
+        --key=*) KEY="${1#*=}" ;;
+        -t|--template) TEMPLATE_FILE="$2" shift ;;
+        --template=*) TEMPLATE_FILE="${1#*=}" ;;
+        --) shift ;;
+        -*) printf >&2 '$0: Unknown option: %s\n' "$1"; usage; exit 2 ;;
+        *) COMMON_NAME="$1" ;;
+    esac
+    shift
+done;
+
+if [ -z "$COMMON_NAME" ]; then
+  usage
+  exit 1
+fi
+
+printer () {
+  echo "$COMMON_NAME: $1"
+}
+
+info () {
+  printer "INFO: $1"
+}
+
+warn () {
+  printer "WARN: $1"
+}
+
+err () {
+  printer "ERROR: $1"
+  exit 1
+}
+
+if [ -z "$TEMPLATE_FILE" ]; then
+  TEMPLATE_PARAMETERS=( "$ORGANIZATION", "$OUNIT", "$LOCALITY", "$STATE", "$COUNTRY", "$EMAIL" )
+  for param in "${TEMPLATE_PARAMETERS[@]}"
+  do
+    if [ -z $param ]; then
+      err "Config template parameters are missing. Check --help for more information"
+    fi
+  done
+fi
+
+if [ ! -e "$COMMON_NAME" ]; then
+  mkdir -p "$COMMON_NAME"
+else
+  err "File exists, $COMMON_NAME"
+fi
+
+# check if key file exists and valid
+if [ -z "$KEY" -a -f "$KEY" ]; then
+  openssl rsa -in asd.com.key -check >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    warn "Provided private key ($KEY) had some problems. Generating a new one instead."
+    KEY="$COMMON_NAME.key"
+    openssl genrsa -out "$COMMON_NAME/$KEY" 2048
+  else
+    info "Using provided private key ($KEY)."
+    cp "$KEY" "$COMMON_NAME/."
+  fi
+else
+  KEY="$COMMON_NAME.key"
+  openssl genrsa -out "$COMMON_NAME/$KEY" 2048
+fi
+
+if [ -f "$TEMPLATE_FILE" ]; then
+  warn "Using existing config template: $TEMPLATE_FILE"
+  cp "$TEMPLATE_FILE" "$COMMON_NAME/."
+else
+  cat << EOF >> "$COMMON_NAME/$COMMON_NAME.cnf"
+[ req ]
+default_bits       = 2048 # Size of keys
+default_keyfile    = $KEY # name of generated keys
+default_md         = md5 # message digest algorithm
+string_mask        = nombstr # permitted characters
+distinguished_name = req_distinguished_name
+
+[ req_distinguished_name ]
+# Variable name   Prompt string
+0.organizationName     = Organization Name (company)
+organizationalUnitName = Organizational Unit Name (department, division)
+emailAddress           = Email Address
+emailAddress_max       = 40
+localityName           = Locality Name (city, district)
+stateOrProvinceName    = State or Province Name (full name)
+countryName            = Country Name (2 letter code)
+countryName_min        = 2
+countryName_max        = 2
+commonName             = Common Name (hostname, IP, or your name)
+commonName_max         = 64
+
+countryName_default            = $COUNTRY
+stateOrProvinceName_default    = $STATE
+localityName_default           = $LOCALITY
+0.organizationName_default     = $ORGANIZATION
+organizationalUnitName_default = $OUNIT
+commonName_default             = $COMMON_NAME
+emailAddress_default           = $EMAIL
+EOF
+fi
+
+cd "$COMMON_NAME"
+openssl req -new -nodes -key "$COMMON_NAME.key" -out "$COMMON_NAME.csr" -config "$COMMON_NAME.cnf" -batch
+if [ $? == 0 ]; then
+  rm "$COMMON_NAME.cnf"
+  info "$COMMON_NAME: Certificate generated successfully."
+fi
