@@ -116,7 +116,7 @@ fi
 
 # check if key file exists and valid
 if [ -z "$KEY" -a -f "$KEY" ]; then
-  openssl rsa -in asd.com.key -check >/dev/null 2>&1
+  openssl rsa -in "$KEY" -check >/dev/null 2>&1
   if [ $? -ne 0 ]; then
     warn "Provided private key ($KEY) had some problems. Generating a new one instead."
     KEY="$COMMON_NAME.key"
