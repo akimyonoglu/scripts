@@ -16,9 +16,6 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License at <http://www.gnu.org/licenses/> for
 # more details.
-
-# Revision history(YYYY-MM-dd):
-# 2014-06-10  Created
 # ---------------------------------------------------------------------------
 
 usage () {
@@ -102,7 +99,7 @@ if [ -z "$TEMPLATE_FILE" ]; then
   TEMPLATE_PARAMETERS=( "$ORGANIZATION", "$OUNIT", "$LOCALITY", "$STATE", "$COUNTRY", "$EMAIL" )
   for param in "${TEMPLATE_PARAMETERS[@]}"
   do
-    if [ -z $param ]; then
+    if [ -z "$param" ]; then
       err "Config template parameters are missing. Check --help for more information"
     fi
   done
