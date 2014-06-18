@@ -117,7 +117,7 @@ if [ -z "$KEY" -a -f "$KEY" ]; then
   if [ $? -ne 0 ]; then
     warn "Provided private key ($KEY) had some problems. Generating a new one instead."
     KEY="$COMMON_NAME.key"
-    openssl genrsa -out "$COMMON_NAME/$KEY" 2048
+    openssl -sha256 genrsa -out "$COMMON_NAME/$KEY" 2048
   else
     info "Using provided private key ($KEY)."
     cp "$KEY" "$COMMON_NAME/."
@@ -135,7 +135,7 @@ else
 [ req ]
 default_bits       = 2048 # Size of keys
 default_keyfile    = $KEY # name of generated keys
-default_md         = md5 # message digest algorithm
+default_md         = sha256 # message digest algorithm
 string_mask        = nombstr # permitted characters
 distinguished_name = req_distinguished_name
 
