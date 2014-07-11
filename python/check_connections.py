@@ -84,7 +84,7 @@ class Connection(object):
                     sock_proto = socket.SOCK_DGRAM
                 else:
                     sock_proto = socket.SOCK_STREAM
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock = socket.socket(socket.AF_INET, sock_proto)
                 sock.settimeout(timeout)
                 result = sock.connect_ex(
                     (socket.gethostbyname(self.ip), int(self.port)))
@@ -114,7 +114,7 @@ def check_prettier(conn):
 
 def main():
     list_of_conns = [
-        Connection("tcp", "2.2.2.2", "5667", "desc"),
+        Connection("tcp", "195.226.196.174", "2115", "desc"),
     ]
 
     workers = min(number_of_workers, len(list_of_conns))
