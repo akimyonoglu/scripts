@@ -5,9 +5,10 @@ import logging
 import subprocess
 from multiprocessing import Pool
 
-number_of_workers = 1
+number_of_workers = 10
 control_type = "socket"
 timeout = 2
+cool_udp_ports = ["53", "123"]
 
 DEBUG = False
 if DEBUG:
@@ -104,7 +105,9 @@ class Connection(object):
 
 
 def check_prettier(conn):
-    if conn.check():
+    if conn.type in ["udp"] and conn.port not in cool_udp_ports:
+        status = colorize(bcolors.WARNING, "UNKNOWN")
+    elif conn.check():
         status = colorize(bcolors.OKGREEN, "OK")
     else:
         status = colorize(bcolors.FAIL, "NOK")
@@ -114,7 +117,7 @@ def check_prettier(conn):
 
 def main():
     list_of_conns = [
-        Connection("tcp", "195.226.196.174", "2115", "desc"),
+        Connection("udp", "2.2.2.2", "2115", "desc"),
     ]
 
     workers = min(number_of_workers, len(list_of_conns))
