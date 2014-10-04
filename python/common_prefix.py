@@ -21,12 +21,16 @@
 import sys
 
 
+def usage():
+    print "Usage: ./common_prefix.py asd asde a -> a"
+
+
 def common_prefix(*args):
     """
     Returns the common prefix of the arguments
     """
     if len(args) < 1:
-        return ""
+        usage()
     common_prefix = args[0]
     for arg in args[1:]:
         if common_prefix == "":
